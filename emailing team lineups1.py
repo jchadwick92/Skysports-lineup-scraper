@@ -9,6 +9,7 @@ import xlrd
 
 my_url = 'http://www.skysports.com/premier-league-fixtures'
 
+
 def delete_update_salaries():
     book = xlrd.open_workbook('Yahoo_DF_player_export.xls')
     sheet = book.sheet_by_name('Yahoo_DF_player_export')
@@ -36,6 +37,7 @@ def delete_update_salaries():
     c.close()
     conn.close()
 
+
 def create_expected_values():
     book = xlrd.open_workbook("Merged yahoo stats with IDs 1609.xlsx")
     sheet = book.sheet_by_name('Sheet2')
@@ -56,13 +58,15 @@ def create_expected_values():
     conn.commit()
     c.close()
     conn.close()
-    
+
+
 def get_html(url):
     global soup
     Client = urlopen(url)
     page_html = Client.read()
     Client.close()
     soup = BeautifulSoup(page_html, 'html.parser')
+
 
 def time_href():
     time_link = {}
@@ -81,7 +85,8 @@ def time_href():
         team_url = href.rstrip('0123456789')
         href = team_url + 'teams/' + url_id
         time_link[href] = time
-    return(time_link)
+    return time_link
+
 
 def team_lineup_link(): # checks time and then if within an hour of match, checks the lineup
     for link,ko in time_href().items():
@@ -114,6 +119,7 @@ def team_lineup_link(): # checks time and then if within an hour of match, check
                 print('{:02d}:{:02d}'.format((d.hour),d.minute))
                 time.sleep(60)
 
+
 def email(a, b, lineup_a, lineup_b):
     smtpObj = smtplib.SMTP('smtp.gmail.com', 587)
     smtpObj.ehlo()
@@ -121,6 +127,7 @@ def email(a, b, lineup_a, lineup_b):
     smtpObj.login('#', '#')
     smtpObj.sendmail('#', '#', 'Subject: %s vs %s \n\n%s \n\n%s' %(a, b, lineup_a, lineup_b))
     smtpObj.quit()
+
 
 def get_lineup():
     sections = soup.findAll('div', {'class':'team-lineups__list-team'})
@@ -136,13 +143,13 @@ def get_lineup():
     players = sections[1].ul.findAll('li')
     team_lineup_B = ''
     for i in players[:11]:
-        ### captain
         player = i.a.findAll('span')[1].text
         player = re.sub('\(c\)', '', player)
         player = player.strip()
         team_lineup_B += get_player_avg(player)
 
     email(team_name_A, team_name_B, team_lineup_A, team_lineup_B)
+
 
 def get_player_avg(name):
     conn = sqlite3.connect('football_stats.db')
@@ -158,7 +165,6 @@ def get_player_avg(name):
         salary = 'n/a'
     else:
         c.execute('SELECT salary FROM yahoo_salaries WHERE id=?', (ID,))
-    # TypeError: 'NoneType' object is not subscriptable
         salary = c.fetchone()[0]
         c.execute('SELECT expected_points FROM projections WHERE id=?', (ID,))
         try:
@@ -175,14 +181,15 @@ def get_player_avg(name):
         player_stats = name + '    ' + str(expected_pts) + '    ' + str(salary) + '\n'
     c.close()
     conn.close()
-    return(player_stats)
+    return player_stats
+
     
-#delete_update_salaries()
-#create_expected_values()
-#while True:
- #   if datetime.datetime.now() >= datetime.datetime(2017, 9, 23, 10, 30, 0, 0):
-  #      get_html(my_url)
-   #     team_lineup_link()
-    #    break
+delete_update_salaries()
+create_expected_values()
+while True:
+    if datetime.datetime.now() >= datetime.datetime(2017, 9, 23, 10, 30, 0, 0):
+        get_html(my_url)
+        team_lineup_link()
+        break
 
 
